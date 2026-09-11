@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sahāy — Financial Coach</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Karla:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
+
+<!--
+  GOOGLE SIGN-IN SETUP (optional, skip if you're not using it yet):
+  1. Go to console.firebase.google.com -> create a project (or use an existing GCP project)
+  2. Authentication -> Sign-in method -> enable "Google"
+  3. Project settings -> your apps -> add a Web app -> copy the firebaseConfig object
+  4. Paste it below, replacing the placeholder object
+-->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getAuth, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+  const firebaseConfig = {
+    apiKey: "APIKEYHERE",
+    authDomain: "project-52c4a541-a471-4a0f-807.firebaseapp.com",
+    projectId: "project-52c4a541-a471-4a0f-807",
+    storageBucket: "project-52c4a541-a471-4a0f-807.firebasestorage.app",
+    messagingSenderId: "236331403059",
+    appId: "1:236331403059:web:f6f12b970d1d80fbcb6046",
+    measurementId: "G-52DP1TK6T1"
+  };
+
+  let auth = null;
+  try {
+    const app = initializeApp(firebaseConfig);
+    auth = getAuth(app);
+  } catch (e) {
+    console.warn("Firebase not configured yet -- Google sign-in will show a helpful error instead of crashing.");
+  }
+
+  window.loginWithGoogle = async function() {
+    const errEl = document.getElementById('login-error');
+    if (!auth) {
+      errEl.textContent = "Google sign-in needs your Firebase config pasted into index.html first.";
+      errEl.style.display = 'block';
+      return;
+    }
+    try {
+      const provider = new GoogleAuthProvider();
+      const result = await signInWithPopup(auth, provider);
+      const idToken = await result.user.getIdToken();
+      const res = await fetch('/api/google-login', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({id_token: idToken})
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Google sign-in failed.');
+      window.showApp ? window.showApp(data) : null;
+    } catch (e) {
+      errEl.textContent = e.message;
+      errEl.style.display = 'block';
+    }
+  };
+</script>
+
+<style>
+  :root {
+    --parchment: #F3E9D8; --ink: #2B2118; --ink-soft: #55483B;
+    --terracotta: #A6401F; --terracotta-deep: #7E2F16; --ochre: #C98A2C;
+    --indigo: #2F4858; --leaf: #4C7A51; --card: #FBF6EC;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--parchment); color: var(--ink); font-family: 'Karla', sans-serif; line-height: 1.55; }
+  h1, h2, h3 { font-family: 'Fraunces', serif; font-weight: 500; }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 32px; }
+  nav { display: flex; align-items: center; justify-content: space-between; padding: 24px 0; }
+  .logo { font-family: 'Fraunces', serif; font-size: 22px; font-weight: 600; color: var(--terracotta-deep); }
+  #logout-btn { display: none; border: 1.5px solid var(--indigo); color: var(--indigo); background: transparent; padding: 8px 18px; border-radius: 8px; font-weight: 500; font-size: 14px; cursor: pointer; }
+
+  .hero { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 40px; align-items: center; padding: 40px 0 60px; }
+  .hero h1 { font-size: 44px; line-height: 1.12; margin: 0 0 20px; max-width: 480px; }
+  .hero p { font-size: 17px; color: var(--ink-soft); max-width: 420px; }
+
+  .process { padding: 20px 0 60px; border-top: 1px solid #DDD0B4; }
+  .process h2 { font-size: 26px; margin: 40px 0 32px; }
+  .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px; }
+  .step .num { font-family: 'Fraunces', serif; font-size: 34px; color: var(--ochre); font-weight: 500; margin-bottom: 8px; display: block; }
+  .step h3 { font-size: 17px; margin: 0 0 8px; }
+  .step p { font-size: 14.5px; color: var(--ink-soft); margin: 0; }
+
+  #login-section { display: block; max-width: 420px; margin: 20px auto 80px; background: var(--card); border: 1px solid #E4D6B8; border-radius: 16px; padding: 36px; }
+  #login-section h2 { text-align: center; margin: 0 0 6px; font-size: 22px; }
+  #login-section p.sub { text-align: center; color: var(--ink-soft); font-size: 14px; margin: 0 0 24px; }
+  .field-label { font-size: 13px; color: var(--ink-soft); display: block; margin-bottom: 6px; }
+  .field { width: 100%; padding: 11px 14px; border-radius: 8px; border: 1px solid #D9C79E; background: #FFFDF8; font-size: 14.5px; margin-bottom: 16px; font-family: 'Karla', sans-serif; }
+  .login-btn { width: 100%; background: var(--indigo); color: #F3E9D8; padding: 12px; border: none; border-radius: 8px; font-weight: 500; font-size: 15px; cursor: pointer; }
+  .divider { text-align: center; color: var(--ink-soft); font-size: 13px; margin: 18px 0; }
+  .google-btn { width: 100%; background: #FFFFFF; border: 1px solid #D9C79E; padding: 11px; border-radius: 8px; font-size: 14.5px; font-weight: 500; cursor: pointer; }
+  #login-error { color: var(--terracotta); font-size: 13.5px; margin-top: 10px; text-align: center; display: none; }
+  .toggle-mode { text-align: center; font-size: 13.5px; color: var(--ink-soft); margin-top: 16px; }
+  .toggle-mode a { color: var(--indigo); cursor: pointer; text-decoration: underline; }
+  #signup-fields { display: none; }
+
+  #app-section { display: none; }
+  .tabs { display: flex; gap: 4px; margin-bottom: 24px; border-bottom: 1px solid #DDD0B4; }
+  .tab-btn { background: none; border: none; padding: 10px 18px; font-size: 14.5px; font-weight: 500; color: var(--ink-soft); cursor: pointer; border-bottom: 2px solid transparent; }
+  .tab-btn.active { color: var(--terracotta-deep); border-bottom-color: var(--terracotta); }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+  .badge-row { display: flex; align-items: center; gap: 16px; margin-bottom: 8px; flex-wrap: wrap; }
+  .badge { display: inline-flex; align-items: center; gap: 8px; background: #F6E7C9; border: 1.5px solid var(--ochre); border-radius: 999px; padding: 7px 16px; font-weight: 600; color: #7A4E10; font-size: 14px; }
+  #gauge-chart { max-width: 340px; margin-bottom: 12px; }
+  #forecast-chart { max-width: 500px; margin: 12px 0; }
+  .forecast-note { font-size: 13.5px; color: var(--ink-soft); margin: 4px 0 16px; }
+  #upload-form { border: 1px solid #DDD0B4; border-radius: 12px; padding: 24px; background: var(--card); }
+  #file-input { margin: 12px 0; }
+  #analyze-btn { background: var(--terracotta); color: #FBF6EC; padding: 12px 24px; border: none; border-radius: 8px; font-weight: 500; font-size: 15px; cursor: pointer; }
+  #analyze-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+  .bubble-row { display: flex; margin: 10px 0; }
+  .bubble-row.user { justify-content: flex-end; }
+  .bubble { max-width: 78%; padding: 12px 16px; border-radius: 12px; font-size: 14.5px; line-height: 1.5; }
+  .bubble.user { background: #E8DCC0; border: 1px solid #D9C79E; }
+  .bubble.assistant { background: #FFFFFF; border: 1px solid #E7DCC3; }
+
+  footer { padding: 28px 0 40px; border-top: 1px solid #DDD0B4; color: var(--ink-soft); font-size: 13.5px; margin-top: 60px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <nav>
+    <div class="logo">Sahāy</div>
+    <button id="logout-btn" onclick="logout()">Log out</button>
+  </nav>
+
+  <section class="hero">
+    <div>
+      <h1>Financial clarity, in your language.</h1>
+      <p>Upload today's invoices. Sahāy reads them, checks them against your cash flow, and coaches you on the festivals and seasons ahead.</p>
+    </div>
+    <div style="display:flex; justify-content:center;">
+      <div style="width:300px; height:300px; border-radius:50%; overflow:hidden; background:#EDE0C8; border:1.5px solid #D9C79E; display:flex; align-items:center; justify-content:center;">
+        <img
+          src="{{ url_for('static', filename='images/gold-coins-and-a-plant.svg') }}"
+          alt="A plant growing among gold coins"
+          style="width:78%; height:78%; object-fit:contain;">
+      </div>
+    </div>
+  </section>
+
+  <section class="process">
+    <h2>Three steps, every morning</h2>
+    <div class="steps">
+      <div class="step"><span class="num">01</span><h3>Upload</h3><p>Snap a photo of today's receipts and invoices, in any handwriting, in any script.</p></div>
+      <div class="step"><span class="num">02</span><h3>Analyze</h3><p>Sahāy checks spending against your typical turnover and flags what needs attention.</p></div>
+      <div class="step"><span class="num">03</span><h3>Grow</h3><p>Get advice tuned to your trade and the season ahead, spoken back to you in Hindi, Tamil, or your language of choice.</p></div>
+    </div>
+  </section>
+
+  <section id="login-section">
+    <h2>Welcome back</h2>
+    <p class="sub">Sign in with Google to see your ledger and past advice.</p>
+    <button class="google-btn" onclick="loginWithGoogle()" style="padding:14px;">Continue with Google</button>
+    <div id="login-error"></div>
+  </section>
+
+  <section id="app-section">
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchTab('dashboard')">Dashboard</button>
+      <button class="tab-btn" onclick="switchTab('profile')">Profile</button>
+      <button class="tab-btn" onclick="switchTab('contact')">Contact us</button>
+    </div>
+
+    <div id="tab-dashboard" class="tab-panel active">
+      <div id="dashboard-header"></div>
+      <div id="gauge-chart"></div>
+      <div id="forecast-chart"></div>
+      <div id="forecast-note" class="forecast-note"></div>
+
+      <form id="upload-form">
+        <h3 style="margin:0 0 6px;">Upload today's invoices/receipts</h3>
+        <select id="language-select" class="field" style="width:auto; display:inline-block;">
+          <option>English</option><option>Hindi</option><option>Marathi</option><option>Tamil</option><option>Bengali</option>
+        </select>
+        <select id="profession-select" class="field" style="width:auto; display:inline-block;">
+          <option>Tailor</option><option>Kirana Store Owner</option><option>Chai/Street Food Vendor</option>
+          <option>Artisan / Handicrafts</option><option>Mobile Repair</option><option>Agri-input Dealer</option>
+        </select>
+        <br>
+        <input type="file" id="file-input" multiple accept="image/*">
+        <br>
+        <button type="button" id="analyze-btn" onclick="analyzeInvoices()">Analyze invoices</button>
+      </form>
+
+      <div id="conversation" style="margin-top:24px;"></div>
+      <audio id="advice-audio" controls style="display:none; margin-top:12px;"></audio>
+    </div>
+
+    <div id="tab-profile" class="tab-panel">
+      <div style="max-width:420px; background:var(--card); border:1px solid #E4D6B8; border-radius:16px; padding:32px;">
+        <h3 style="margin:0 0 6px;">Your profile</h3>
+        <p style="font-size:13.5px; color:var(--ink-soft); margin:0 0 20px;">Business ID: <span id="profile-business-id"></span></p>
+        <label class="field-label">Name</label>
+        <input class="field" id="profile-name">
+        <label class="field-label">Profession</label>
+        <select class="field" id="profile-profession">
+          <option>Tailor</option><option>Kirana Store Owner</option><option>Chai/Street Food Vendor</option>
+          <option>Artisan / Handicrafts</option><option>Mobile Repair</option><option>Agri-input Dealer</option>
+        </select>
+        <button class="login-btn" onclick="saveProfile()">Save changes</button>
+        <div id="profile-saved" style="display:none; color:var(--leaf); font-size:13.5px; margin-top:10px;">Saved.</div>
+      </div>
+
+      <div style="max-width:420px; margin-top:24px;">
+        <h3 style="margin:0 0 12px;">Previous conversations</h3>
+        <div id="conversations-list"></div>
+      </div>
+    </div>
+
+    <div id="tab-contact" class="tab-panel">
+      <div style="max-width:420px; background:var(--card); border:1px solid #E4D6B8; border-radius:16px; padding:32px;">
+        <h3 style="margin:0 0 6px;">Contact us</h3>
+        <p style="font-size:13.5px; color:var(--ink-soft); margin:0 0 20px;">Questions or issues? Send a message and we'll get back to you.</p>
+        <label class="field-label">Your email (optional)</label>
+        <input class="field" id="contact-email">
+        <label class="field-label">Message</label>
+        <textarea class="field" id="contact-message" rows="5" style="resize:vertical;"></textarea>
+        <button class="login-btn" onclick="sendContactMessage()">Send message</button>
+        <div id="contact-sent" style="display:none; color:var(--leaf); font-size:13.5px; margin-top:10px;">Message sent — thank you.</div>
+      </div>
+    </div>
+  </section>
+
+  <footer>Sahāy — built for the Patchamomma Google Cloud initiative.</footer>
+</div>
+
+<script>
+function switchTab(name) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  event.target.classList.add('active');
+  if (name === 'profile') loadProfile();
+}
+
+async function loadProfile() {
+  const res = await fetch('/api/profile');
+  const data = await res.json();
+  document.getElementById('profile-business-id').textContent = data.business_id || '';
+  document.getElementById('profile-name').value = data.name || '';
+  document.getElementById('profile-profession').value = data.profession || 'Tailor';
+  loadConversations();
+}
+
+async function loadConversations() {
+  const res = await fetch('/api/conversations');
+  const listEl = document.getElementById('conversations-list');
+  if (!res.ok) { listEl.innerHTML = ''; return; }
+  const items = await res.json();
+  if (!items.length) {
+    listEl.innerHTML = '<p style="font-size:13.5px; color:var(--ink-soft);">No previous analyses yet.</p>';
+    return;
+  }
+  listEl.innerHTML = items.map(item => {
+    const date = new Date(item.timestamp).toLocaleString();
+    const preview = item.advice.length > 160 ? item.advice.slice(0, 160) + '…' : item.advice;
+    return `
+      <div style="background:var(--card); border:1px solid #E4D6B8; border-radius:10px; padding:14px 16px; margin-bottom:10px;">
+        <div style="font-size:12px; color:var(--ink-soft); margin-bottom:4px;">${date} — ${item.risk_tier}-tier, ${item.outflow_percentage}% outflow</div>
+        <div style="font-size:13.5px; line-height:1.5;">${preview}</div>
+      </div>`;
+  }).join('');
+}
+
+async function saveProfile() {
+  const name = document.getElementById('profile-name').value.trim();
+  const profession = document.getElementById('profile-profession').value;
+  const res = await fetch('/api/profile', {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({name, profession})
+  });
+  if (res.ok) {
+    document.getElementById('profession-select').value = profession;
+    const savedEl = document.getElementById('profile-saved');
+    savedEl.style.display = 'block';
+    setTimeout(() => savedEl.style.display = 'none', 2000);
+  }
+}
+
+async function sendContactMessage() {
+  const email = document.getElementById('contact-email').value.trim();
+  const message = document.getElementById('contact-message').value.trim();
+  if (!message) { alert('Write a message first.'); return; }
+  const res = await fetch('/api/contact', {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({email, message})
+  });
+  if (res.ok) {
+    document.getElementById('contact-message').value = '';
+    const sentEl = document.getElementById('contact-sent');
+    sentEl.style.display = 'block';
+    setTimeout(() => sentEl.style.display = 'none', 3000);
+  }
+}
+
+async function logout() {
+  await fetch('/api/logout', {method: 'POST'});
+  document.getElementById('login-section').style.display = 'block';
+  document.getElementById('app-section').style.display = 'none';
+  document.getElementById('logout-btn').style.display = 'none';
+}
+
+function showApp(data) {
+  document.getElementById('login-section').style.display = 'none';
+  document.getElementById('app-section').style.display = 'block';
+  document.getElementById('logout-btn').style.display = 'inline-block';
+  if (data.profession) document.getElementById('profession-select').value = data.profession;
+  window.currentUserData = data;
+}
+
+async function analyzeInvoices() {
+  const files = document.getElementById('file-input').files;
+  const btn = document.getElementById('analyze-btn');
+  if (!files.length) { alert('Choose at least one invoice image.'); return; }
+
+  btn.disabled = true;
+  btn.textContent = 'Analyzing...';
+
+  const formData = new FormData();
+  for (const f of files) formData.append('files', f);
+  formData.append('language', document.getElementById('language-select').value);
+  formData.append('profession', document.getElementById('profession-select').value);
+
+  try {
+    const res = await fetch('/api/analyze', {method: 'POST', body: formData});
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Analysis failed.');
+    renderResult(data);
+  } catch (e) {
+    alert(e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Analyze invoices';
+  }
+}
+
+function renderGauge(percentage) {
+  const color = percentage < 60 ? '#4C7A51' : percentage < 100 ? '#C98A2C' : '#A6401F';
+  const maxRange = Math.max(150, percentage + 10);
+  Plotly.newPlot('gauge-chart', [{
+    type: "indicator",
+    mode: "gauge+number",
+    value: percentage,
+    number: {suffix: "%", font: {color: '#2B2118', family: 'Karla', size: 32}},
+    gauge: {
+      axis: {range: [0, maxRange], tickcolor: '#55483B', tickfont: {color: '#55483B', size: 11}},
+      bar: {color: color, thickness: 0.7},
+      bgcolor: 'rgba(0,0,0,0)',
+      borderwidth: 1.5,
+      bordercolor: '#D9C79E',
+      steps: [
+        {range: [0, 60], color: '#EAFAF1'},
+        {range: [60, 100], color: '#FEF9E7'},
+        {range: [100, maxRange], color: '#FDEDEC'}
+      ]
+    }
+  }], {
+    paper_bgcolor: 'rgba(0,0,0,0)',
+    plot_bgcolor: 'rgba(0,0,0,0)',
+    font: {family: 'Karla'},
+    margin: {t: 30, b: 10, l: 30, r: 30},
+    height: 220
+  }, {displayModeBar: false, responsive: true});
+}
+
+function renderForecast(history, forecast) {
+  const chartEl = document.getElementById('forecast-chart');
+  const noteEl = document.getElementById('forecast-note');
+
+  if (!history || history.length < 2) {
+    chartEl.innerHTML = '';
+    noteEl.textContent = 'Upload a few more batches over time to unlock a cash-flow trend and forecast.';
+    return;
+  }
+
+  const xs = history.map((h, i) => 'Batch ' + (i + 1));
+  const ys = history.map(h => h.outflow_percentage);
+
+  Plotly.newPlot('forecast-chart', [{
+    x: xs, y: ys, type: 'scatter', mode: 'lines+markers',
+    line: {color: '#A6401F', width: 2},
+    marker: {color: '#A6401F', size: 6}
+  }], {
+    title: {text: 'Outflow % over time', font: {family: 'Karla', size: 14, color: '#2B2118'}},
+    paper_bgcolor: 'rgba(0,0,0,0)',
+    plot_bgcolor: 'rgba(0,0,0,0)',
+    font: {family: 'Karla', color: '#55483B', size: 11},
+    margin: {t: 40, b: 40, l: 40, r: 20},
+    height: 220,
+    yaxis: {gridcolor: '#EAE0C8'}
+  }, {displayModeBar: false, responsive: true});
+
+  if (forecast) {
+    noteEl.textContent = `Trend is ${forecast.trend}. Next batch is projected around ${forecast.forecast_next_outflow_pct}% of turnover. Loan-readiness score: ${forecast.loan_readiness_score}/100.`;
+  } else {
+    noteEl.textContent = '';
+  }
+}
+
+function renderResult(data) {
+  document.getElementById('dashboard-header').innerHTML = `
+    <div class="badge-row">
+      <span class="badge">${data.risk_tier}-tier entrepreneur</span>
+      <span style="color:var(--ink-soft); font-size:13.5px;">Monthly turnover on file: Rs ${data.turnover.toLocaleString()}</span>
+    </div>`;
+
+  renderGauge(data.outflow_percentage);
+  renderForecast(data.history, data.forecast);
+
+  const convo = document.getElementById('conversation');
+  let html = `<div class="bubble-row user"><div class="bubble user">Please analyze today's invoices (${data.receipts_processed} receipt${data.receipts_processed === 1 ? '' : 's'}).</div></div>`;
+  if (data.retrieved_context) {
+    const rc = data.retrieved_context;
+    const rcDate = new Date(rc.timestamp).toLocaleDateString();
+    html += `<div class="bubble-row"><div class="bubble assistant" style="font-size:13px; color:var(--indigo);">🔎 Referencing a similar past situation from ${rcDate} (${Math.round(rc.similarity * 100)}% similar, ${rc.outflow_percentage}% outflow then)</div></div>`;
+  }
+  if (data.currency_conversions && data.currency_conversions.length) {
+    html += `<div class="bubble-row"><div class="bubble assistant" style="font-size:13px; color:var(--ink-soft);">Currency conversions applied: ${data.currency_conversions.join('; ')}</div></div>`;
+  }
+  html += `<div class="bubble-row"><div class="bubble assistant">${data.advice.replace(/\n/g, '<br>')}</div></div>`;
+  convo.innerHTML = html;
+
+  if (data.audio_url) {
+    const audioEl = document.getElementById('advice-audio');
+    audioEl.src = data.audio_url;
+    audioEl.style.display = 'block';
+  }
+}
+</script>
+</body>
+</html>
