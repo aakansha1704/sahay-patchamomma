@@ -1,0 +1,24 @@
+sources:
+  sahay-bq-source:
+    kind: bigquery
+    project: project-52c4a541-a471-4a0f-807
+    location: US   # change if sahay_data is in a different region — check with: bq show --format=prettyjson sahay_data | grep location
+
+tools:
+  get-business-profile:
+    kind: bigquery-sql
+    source: sahay-bq-source
+    description: Look up a business's financial profile by business_id
+    parameters:
+      - name: business_id
+        type: string
+        description: The business ID to look up, e.g. BIZ_1003
+    statement: |
+      SELECT
+        cash_flow_category,
+        monthly_turnover_inr,
+        upi_transaction_percentage,
+        default_risk
+      FROM `project-52c4a541-a471-4a0f-807.sahay_data.master_profiles`
+      WHERE business_id = @business_id
+      LIMIT 1
