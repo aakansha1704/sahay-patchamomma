@@ -51,7 +51,7 @@ graph TD
 ## Key Engineering Decisions
 
 ### 1. Deterministic Arithmetic (Zero Math Hallucinations)
-LLMs are prone to arithmetic errors. To eliminate this risk, all calculations—including summing totals and converting currencies are executed entirely within the application code rather than the AI model. Furthermore, receipts are processed individually rather than batched to prevent the AI from dropping totals or mixing up currencies.
+LLMs are prone to arithmetic errors. To eliminate this risk, all calculations, including summing totals and converting currencies are executed entirely within the application code rather than the AI model. Furthermore, receipts are processed individually rather than batched to prevent the AI from dropping totals or mixing up currencies.
 
 ### 2. RAG Memory Loop (Context-Aware Advice)
 Every financial analysis is saved alongside a compressed numerical "fingerprint" (embedding). Before generating new advice, the system uses cosine similarity to compare the current situation's fingerprint against past situations stored in Firestore. If a similar event occurred, that past context is retrieved and passed to the advice generator, allowing the model to reference past behavior directly.
