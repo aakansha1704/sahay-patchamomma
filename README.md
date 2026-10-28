@@ -1,6 +1,6 @@
 # Sahay: AI-Powered Financial Advisory Platform
 
-Sahay is an AI-powered financial coach built for micro-entrepreneurs: such as tailors, grocery store owners, and street vendors—who run cash-based businesses without access to formal accountants. 
+Sahay is an AI-powered financial coach built for micro-entrepreneurs: such as tailors, grocery store owners, and street vendors, who run cash-based businesses without access to formal accountants. 
 
 Users photograph their receipts, and Sahay extracts the data, cross-references spending against the business's typical cash flow, and delivers personalized advice aloud in the user's native language. Built during the Google Cloud Patchamomma Hackathon, this project solves a critical bottleneck in applied GenAI: **numerical hallucinations and unreliable data access**.
 
@@ -51,7 +51,7 @@ graph TD
 ## Key Engineering Decisions
 
 ### 1. Deterministic Arithmetic (Zero Math Hallucinations)
-LLMs are prone to arithmetic errors. To eliminate this risk, all calculations—including summing totals and converting currencies—are executed entirely within the application code rather than the AI model. Furthermore, receipts are processed individually rather than batched to prevent the AI from dropping totals or mixing up currencies.
+LLMs are prone to arithmetic errors. To eliminate this risk, all calculations—including summing totals and converting currencies are executed entirely within the application code rather than the AI model. Furthermore, receipts are processed individually rather than batched to prevent the AI from dropping totals or mixing up currencies.
 
 ### 2. RAG Memory Loop (Context-Aware Advice)
 Every financial analysis is saved alongside a compressed numerical "fingerprint" (embedding). Before generating new advice, the system uses cosine similarity to compare the current situation's fingerprint against past situations stored in Firestore. If a similar event occurred, that past context is retrieved and passed to the advice generator, allowing the model to reference past behavior directly.
