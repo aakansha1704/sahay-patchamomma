@@ -25,7 +25,16 @@ EMBEDDING_MODEL = "gemini-embedding-001"
 EMBEDDING_DIMENSIONS = 256  # small + fast, plenty for similarity over a personal history
 
 TOOLBOX_URL = os.environ.get("TOOLBOX_URL", "http://127.0.0.1:5000")
+# Fixed rates for now (known limitation, see README).
+FX_TO_INR = {"INR": 1.0, "USD": 83.0, "EUR": 90.0}
 
+
+def to_inr(amount, currency):
+    rate = FX_TO_INR.get((currency or "").upper())
+    if rate is None:
+        raise ValueError(f"Unsupported currency: {currency!r}")
+    return round(float(amount) * rate, 2)
+    
 if USE_GROQ:
     from groq import Groq
     groq_client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
@@ -119,13 +128,10 @@ def extract_single_receipt(uploaded_file) -> str:
     You are an expert AI financial extractor analyzing ONE receipt or invoice image.
     Return ONLY a valid JSON object, no markdown formatting. It must contain:
     - "currency_detected": the currency shown on the receipt, e.g. "INR", "USD", "EUR"
-    - "original_total": the total amount exactly as printed, in its original currency
-    - "total_outflow_inr": the total converted to INR. If currency_detected is already
-      INR, this equals original_total unchanged. If it is USD, convert using
-      1 USD = 83 INR. If it is EUR, convert using 1 EUR = 90 INR. For any other
-      currency, use your best reasonable estimate and say so in a "conversion_note" field.
+    - "original_total": the total amount exactly as printed, in its original currency.
+      Do NOT convert it to any other currency.
     - "transactions": a list of objects, each with "description" (string) and
-      "amount_inr" (number, already converted to INR using the same rate).
+      "amount" (number, in the receipt's original currency, not converted).
     Only extract what's actually on THIS receipt. Do not estimate or invent totals.
     """
 
@@ -183,16 +189,16 @@ def aggregate_invoices(invoice_jsons):
         data = json.loads(invoice)
         receipts_seen += 1
 
-        outflow = data.get('total_outflow_inr', data.get('total_outflow', 0)) or 0
+        currency = data.get("currency_detected", "INR")
+        outflow = to_inr(data["original_total"], currency)
         total_outflow += outflow
-        total_inflow += data.get('total_inflow_inr', data.get('total_inflow', 0)) or 0
+        total_inflow += data.get("total_inflow_inr", data.get("total_inflow", 0)) or 0
 
-        if 'transactions' in data:
-            all_transactions.extend(data['transactions'])
+        if "transactions" in data:
+            all_transactions.extend(data["transactions"])
 
-        if data.get('currency_detected') and data['currency_detected'] != 'INR':
-            note = f"{data.get('original_total')} {data['currency_detected']} -> INR {outflow}"
-            conversion_notes.append(data.get('conversion_note', note))
+        if currency.upper() != "INR":
+            conversion_notes.append(f"{data['original_total']} {currency} -> INR {outflow}")
 
     return {
         "total_outflow": total_outflow,
