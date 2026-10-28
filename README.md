@@ -50,7 +50,7 @@ graph TD
 
 ## Key Engineering Decisions
 
-### 1. Deterministic Arithmetic (Zero Math Hallucinations)
+### 1. Deterministic Arithmetic (Exact Arithmetic)
 LLMs are prone to arithmetic errors. To eliminate this risk, all calculations, including summing totals and converting currencies are executed entirely within the application code rather than the AI model. Furthermore, receipts are processed individually rather than batched to prevent the AI from dropping totals or mixing up currencies.
 
 ### 2. RAG Memory Loop (Context-Aware Advice)
