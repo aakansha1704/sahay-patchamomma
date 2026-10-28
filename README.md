@@ -96,3 +96,6 @@ Because AI APIs can experience transient downtime, the vision-extraction and adv
 
 ### CI/CD Pipeline
 This repository leverages GitHub Actions for continuous integration. On every push to `main`, the CI workflow automatically provisions the environment, installs dependencies, and runs `flake8` to enforce syntax checks and prevent breaking changes from reaching production.
+
+
+Website: https://sahay-app-236331403059.us-central1.run.app/
